@@ -3,4 +3,4 @@ Official Repository for "See, Rank and Filter: Important Word-Aware Clip Filteri
 
 Accepted at AAAI 2026 Oral🔥
 
-[Paper] [arXiv](https://www.arxiv.org/abs/2511.22906)
+[Paper] [[arXiv](https://www.arxiv.org/abs/2511.22906)]
