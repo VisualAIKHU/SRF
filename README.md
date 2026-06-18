@@ -1,6 +1,8 @@
 # [AAAI 2026 Oral] See, Rank and Filter: Important Word-Aware Clip Filtering via Scene Understanding for Moment Retrieval and Highlight Detection
 
 [![arXiv](https://img.shields.io/badge/arXiv-2511.22906-B31B1B?style=flat&logo=arXiv&logoColor=white)](https://arxiv.org/abs/2511.22906)
+[![AAAI 2026](https://img.shields.io/badge/AAAI-2026%20Paper-2D6CDF?style=flat)](https://ojs.aaai.org/index.php/AAAI/article/view/37516)
+![Visitors](https://komarev.com/ghpvc/?username=SRF&label=visitors&color=0e75b6&style=flat)
 
 Official Repository for "See, Rank and Filter: Important Word-Aware Clip Filtering via Scene Understanding for Moment Retrieval and Highlight Detection".
 
@@ -23,17 +25,17 @@ cd SRF
 
 - Download [moment_detr_features.tar.gz](https://drive.google.com/file/d/1LXsZZBsv6Xbg_MmNQOezw0QYKccjcOkP/view)(8GB) and extract it under the `../features` directory.
 
-- Additionally, You can download the [caption_features_internvl.tar.gz]().
+- Additionally, You can download the [caption_features_internvl.tar.gz](https://huggingface.co/datasets/dbdms/SRF_captions/blob/main/caption_features_internvl.tar.gz).
 
 #### TVSum
 - Download the feature files from [UMT](https://github.com/tencentarc/umt?tab=readme-ov-file).
 
-- Additionally, You can download the [TVSum_caption_features.tar.gz]().
+- Additionally, You can download the [TVSum_caption_features.tar.gz](https://huggingface.co/datasets/dbdms/SRF_captions/blob/main/TVSum_caption_features.tar.gz).
 
 #### Charades-STA
 - Download the feature files from [UMT](https://github.com/tencentarc/umt?tab=readme-ov-file).
 
-- Additionally, You can download the [Charades-STA_caption_features.tar.gz]().
+- Additionally, You can download the [Charades-STA_caption_features_sfc.tar.gz](https://huggingface.co/datasets/dbdms/SRF_captions/blob/main/Charades_caption_features_sfc.tar.gz) and [Charades-STA_caption_features_vgg.tar.gz](https://huggingface.co/datasets/dbdms/SRF_captions/blob/main/Charades_caption_features_vgg.tar.gz).
 
 ### 2. Install requirements
 ```
@@ -65,11 +67,14 @@ For more details for submission, [check standalone_eval/README.md](https://githu
 
 ## 🔖 Citation
 ```
-@article{lee2025see,
+@inproceedings{lee2026see,
   title={See, Rank, and Filter: Important Word-Aware Clip Filtering via Scene Understanding for Moment Retrieval and Highlight Detection},
   author={Lee, YuEun and Kim, Jung Uk},
-  journal={arXiv preprint arXiv:2511.22906},
-  year={2025}
+  booktitle={Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume={40},
+  number={8},
+  pages={5936--5944},
+  year={2026}
 }
 ```
 
