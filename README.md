@@ -39,7 +39,7 @@ cd SRF
 
 ### 2. Install requirements
 ```
-condda create -n srf python=3.11.8
+conda create -n srf python=3.11.8
 conda activate srf
 
 pip install -r requirements.txt
@@ -52,7 +52,7 @@ You can train the model using only video features or both video and audio featur
 bash srf/scripts/train.sh
 bash srf/scripts/train_audio.sh
 ```
-You need to modify `reseults_root`, `exp_id` and `feat_root` before running the shell and make sure each feature directory(`v_feat_dirs`, `t_feat_dir` and `c_feat_dir`) is set correctly.
+You need to modify `results_root`, `exp_id` and `feat_root` before running the shell and make sure each feature directory(`v_feat_dirs`, `t_feat_dir` and `c_feat_dir`) is set correctly.
 
 ## 📊 Evaluation
 ### QVHighlights
