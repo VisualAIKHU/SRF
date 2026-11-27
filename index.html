@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>See, Rank, and Filter</title>
+<meta name="description" content="See, Rank, and Filter (AAAI 2026 Oral): important word-aware clip filtering via scene understanding for moment retrieval and highlight detection.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (max 980px). Text holds ~68ch; figures and tables use the full column on white plates. */
+:root {
+  --bg: #f6f7fa;
+  --surface: #ffffff;
+  --ink: #151922;
+  --muted: #586172;
+  --line: #dde1e9;
+  --accent: #b3261e;        /* rank-1 red, the color the paper gives the top word */
+  --accent-soft: #fbeceb;
+  --rank2: #1f5fbf;
+  --rank2-soft: #e8f0fb;
+  --rank3: #1c7c3c;
+  --rank3-soft: #e6f4ea;
+  --film: #151922;
+  --film-ink: #f2f4f8;
+  --plate: #ffffff;         /* figures are drawn on white in both themes */
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11141a; --surface: #191d26; --ink: #e9ecf2; --muted: #9ba4b4; --line: #2a303c;
+    --accent: #ff8f80; --accent-soft: #3a1d1b;
+    --rank2: #86b4ff; --rank2-soft: #172840;
+    --rank3: #7ed29a; --rank3-soft: #15301f;
+    --film: #05070a; --film-ink: #f2f4f8; --plate: #ffffff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11141a; --surface: #191d26; --ink: #e9ecf2; --muted: #9ba4b4; --line: #2a303c;
+  --accent: #ff8f80; --accent-soft: #3a1d1b;
+  --rank2: #86b4ff; --rank2-soft: #172840;
+  --rank3: #7ed29a; --rank3-soft: #15301f;
+  --film: #05070a; --film-ink: #f2f4f8; --plate: #ffffff;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main.wrap { display: flex; flex-direction: column; gap: 72px; padding-block: 64px 80px; }
+section { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+section > p, section > ul { max-width: 68ch; margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 1.75rem; line-height: 1.2; }
+h3 { font-size: 1.15rem; line-height: 1.3; }
+
+/* ---------- Hero ---------- */
+header.hero { border-bottom: 1px solid var(--line); background: var(--surface); }
+.hero .wrap { display: flex; flex-direction: column; gap: 24px; padding-block: 56px 48px; }
+.venue {
+  font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent); margin: 0;
+}
+h1 { font-size: clamp(2.1rem, 5.4vw, 3.5rem); line-height: 1.05; font-weight: 700; }
+h1 .sub {
+  display: block; margin-top: 14px; max-width: 30em;
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem); line-height: 1.35; font-weight: 500; color: var(--muted); letter-spacing: 0;
+}
+.authors { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; font-size: 1.05rem; font-weight: 500; }
+.authors a { color: var(--ink); text-decoration-color: var(--line); }
+.authors a:hover { text-decoration-color: var(--accent); }
+.affil { margin: -14px 0 0; color: var(--muted); font-size: 0.95rem; }
+.links { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border-radius: 6px; border: 1px solid var(--ink);
+  background: var(--ink); color: var(--bg);
+  font: 600 0.92rem var(--font-body); text-decoration: none; cursor: pointer;
+}
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn:hover { border-color: var(--accent); }
+.btn.ghost:hover { color: var(--accent); }
+
+/* ---------- Filtering demo (the idea of Figure 1) ---------- */
+.demo { display: flex; flex-direction: column; gap: 14px; }
+.query { margin: 0; font-family: var(--font-display); font-size: clamp(1.1rem, 2.6vw, 1.45rem); font-weight: 500; }
+.query .label { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-right: 10px; }
+.w { border-bottom: 2px solid transparent; padding: 0 1px; transition: background-color .25s, border-color .25s; }
+.w.on[data-w="man"]  { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.w.on[data-w="duck"] { color: var(--rank2);  border-color: var(--rank2);  background: var(--rank2-soft); }
+.w.on[data-w="bus"]  { color: var(--rank3);  border-color: var(--rank3);  background: var(--rank3-soft); }
+.steps { display: flex; flex-wrap: wrap; gap: 8px; }
+.step {
+  font: 500 0.85rem var(--font-mono); padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer;
+}
+.step[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.strip {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px;
+  background: var(--film); padding: 14px 8px; border-radius: 4px;
+  background-image: radial-gradient(circle, var(--film-ink) 0 2.2px, transparent 2.6px), radial-gradient(circle, var(--film-ink) 0 2.2px, transparent 2.6px);
+  background-size: 14px 8px, 14px 8px; background-repeat: repeat-x, repeat-x; background-position: 3px 3px, 3px calc(100% - 3px);
+}
+.clip {
+  min-width: 0; min-height: 76px; padding: 8px; border-radius: 2px;
+  background: var(--film-ink); color: #151922;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 6px;
+  outline: 3px solid transparent; outline-offset: -3px;
+  transition: opacity .3s, outline-color .3s;
+}
+.clip .n { font: 500 0.7rem var(--font-mono); color: #586172; }
+.clip .tags { font-size: 0.78rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.clip.out { opacity: 0.22; }
+.clip.hit { outline-color: #e5392e; }
+.demo-note { margin: 0; color: var(--muted); font-size: 0.88rem; }
+
+/* ---------- Figures ---------- */
+figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.plate { background: var(--plate); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+.plate img { margin: 0 auto; }
+figcaption { color: var(--muted); font-size: 0.9rem; line-height: 1.5; max-width: 72ch; }
+.split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 32px; align-items: start; }
+.split > div { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.split p { margin: 0; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.pair > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; border-top: 2px solid var(--ink); padding-top: 14px; }
+.pair p { margin: 0; }
+.tag { font: 500 0.75rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+
+/* ---------- Tables ---------- */
+.table-block { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 12px; text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font: 500 0.74rem var(--font-mono); letter-spacing: 0.04em; color: var(--muted); border-bottom: 1px solid var(--line); }
+thead tr.group th { text-align: center; border-bottom: 0; padding-bottom: 0; }
+tbody td { border-bottom: 1px solid var(--line); }
+tbody tr:last-child td { border-bottom: 0; }
+td.c { text-align: center; }
+tr.sep td { font: 500 0.74rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: left; }
+tr.ours td { background: var(--accent-soft); font-weight: 600; }
+td .v { color: var(--muted); font-size: 0.78rem; margin-left: 4px; }
+b.best { font-weight: 700; color: var(--accent); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: start; }
+
+/* ---------- BibTeX ---------- */
+.bib { position: relative; }
+pre {
+  margin: 0; padding: 20px; overflow-x: auto; border-radius: 6px;
+  background: var(--surface); border: 1px solid var(--line);
+  font: 400 0.84rem/1.6 var(--font-mono); color: var(--ink);
+}
+.copy { position: absolute; top: 10px; right: 10px; padding: 5px 12px; font-size: 0.8rem; }
+footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 0.88rem; }
+footer .wrap { padding-block: 28px 40px; display: flex; flex-direction: column; gap: 10px; }
+footer p { margin: 0; max-width: 80ch; }
+
+@media (max-width: 720px) {
+  body { font-size: 16px; }
+  main.wrap { gap: 56px; padding-block: 44px 56px; }
+  .split, .pair, .two { grid-template-columns: minmax(0, 1fr); }
+  .plate { padding: 10px; }
+  .clip { min-height: 64px; padding: 5px; }
+  .clip .tags { font-size: 0.66rem; }
+}
+@media (prefers-reduced-motion: reduce) { .w, .clip { transition: none; } }
+</style>
+
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="venue">AAAI 2026 · Oral</p>
+    <h1>See, Rank, and Filter
+      <span class="sub">Important Word-Aware Clip Filtering via Scene Understanding for Moment Retrieval and Highlight Detection</span>
+    </h1>
+    <p class="authors">
+      <a href="https://www.linkedin.com/in/yueun-lee-86537a350">YuEun Lee</a>
+      <a href="https://scholar.google.co.kr/citations?user=JMZ80R8AAAAJ&hl=en">Jung Uk Kim<sup>*</sup></a>
+    </p>
+    <p class="affil">Kyung Hee University · <sup>*</sup>Corresponding author</p>
+    <div class="links">
+      <a class="btn" href="https://ojs.aaai.org/index.php/AAAI/article/view/37516">Paper</a>
+      <a class="btn ghost" href="https://arxiv.org/abs/2511.22906">arXiv</a>
+      <a class="btn ghost" href="https://github.com/VisualAIKHU/SRF">Code</a>
+      <a class="btn ghost" href="#bibtex">BibTeX</a>
+    </div>
+
+    <div class="demo" aria-label="Illustration of iterative clip filtering">
+      <p class="query"><span class="label">Query</span><span class="w" data-w="man">Man</span> is holding a <span class="w" data-w="duck">duck</span> on the <span class="w" data-w="bus">bus</span></p>
+      <div class="steps" role="group" aria-label="Filtering step">
+        <button class="step" id="step-0" type="button" data-step="0">All clips</button>
+        <button class="step" id="step-1" type="button" data-step="1">1st word: Man</button>
+        <button class="step" id="step-2" type="button" data-step="2">2nd word: Duck</button>
+        <button class="step" id="step-3" type="button" data-step="3">N-th word: Bus</button>
+      </div>
+      <div class="strip" id="strip">
+        <div class="clip" data-has="man bus"><span class="n">clip 1</span><span class="tags">Man, Bus</span></div>
+        <div class="clip" data-has="man duck"><span class="n">clip 2</span><span class="tags">Man, Duck</span></div>
+        <div class="clip" data-has=""><span class="n">clip 3</span><span class="tags">Hand</span></div>
+        <div class="clip" data-has="man duck bus"><span class="n">clip 4</span><span class="tags">Man, Duck, Bus</span></div>
+        <div class="clip" data-has="man"><span class="n">clip 5</span><span class="tags">Man</span></div>
+      </div>
+      <p class="demo-note">Schematic of the idea in Figure 1 of the paper: rank the important words of the query, then filter clips one word at a time. The labels are the example from the figure, not model output.</p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="abstract">
+    <h2>Abstract</h2>
+    <p>Video moment retrieval (MR) and highlight detection (HD) with natural language queries aim to localize relevant moments and key highlights in video clips. However, existing methods overlook the importance of individual words, treating the entire text query and video clips as a black box, which hinders contextual understanding.</p>
+    <p>We propose a novel approach that enables fine-grained clip filtering by identifying and prioritizing important words in the query. Our method integrates image-text scene understanding through Multimodal Large Language Models (MLLMs) and enhances the semantic understanding of video clips. We introduce a feature enhancement module (FEM) to capture important words from the query and a ranking-based filtering module (RFM) to iteratively refine video clips based on their relevance to these important words. Extensive experiments demonstrate that our approach significantly outperforms existing state-of-the-art methods, achieving superior performance in both MR and HD tasks.</p>
+  </section>
+
+  <section id="idea">
+    <h2>Read the query the way people do</h2>
+    <div class="split">
+      <div>
+        <p>Given a query such as <em>“Man is holding a duck on the bus”</em>, a person first picks out the words that matter (<em>man</em>, <em>duck</em>, <em>bus</em>, <em>hold</em>) and ranks them, then looks for the clips that match those words in order.</p>
+        <p>Existing MR/HD models skip both steps. They encode the whole query and every clip at once, so no word is treated as more important than another, and they rely on raw visual features with little understanding of what is happening in the scene.</p>
+        <p>Our framework does both: it (a) finds and prioritizes the important words in the query and (b) filters video clips by that priority, using MLLM-generated clip captions to understand each scene.</p>
+      </div>
+      <figure>
+        <div class="plate"><img src="static/images/concept.png" alt="A query is split into ranked important words (Man, Duck, Bus); clips are filtered step by step until only the clip matching all words remains." width="983" height="930"></div>
+        <figcaption>Conceptual illustration. (a) Find and prioritize important words in the text query. (b) Filter video clips based on the priority of those words.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="method">
+    <h2>Method</h2>
+    <p>Query and video features come from frozen text and visual encoders. InternVL2 writes a caption for every clip, which is encoded as a third stream. The three streams pass through the feature enhancement module, then the ranking-based filtering module, and finally a transformer encoder-decoder prediction head for MR and HD.</p>
+    <figure>
+      <div class="plate"><img src="static/images/architecture.png" alt="Overall architecture: textual and visual encoders, feature enhancement module with word highlighting and scene understanding steps, ranking-based filtering module, and prediction head." width="1990" height="680"></div>
+      <figcaption>Overall architecture. Query, visual, and caption features are enhanced to prioritize important words and deepen scene understanding, then clips irrelevant to the query are filtered out repeatedly.</figcaption>
+    </figure>
+    <div class="pair">
+      <div>
+        <span class="tag">FEM</span>
+        <h3>Feature Enhancement Module</h3>
+        <p><strong>Word highlighting.</strong> Self-attention over the query gives enhanced query features. Each word is then compared with the globally pooled sentence feature, producing a word-highlighted vector that scores how important each word is. No word-level labels are needed.</p>
+        <p><strong>Scene understanding.</strong> Video–query and caption–query similarities are computed and fused through cross-attention between the visual and caption streams, so each clip carries both what it looks like and what it means.</p>
+      </div>
+      <div>
+        <span class="tag">RFM</span>
+        <h3>Ranking-based Filtering Module</h3>
+        <p>Query–video and query–caption similarity matrices are blended with a learnable weight. Taking the top-<em>N</em> words from the word-highlighted vector in rank order, the module reweights the clip features by each word’s similarity column with a residual connection.</p>
+        <p>After <em>N</em> iterations, clips unrelated to the important words are suppressed and the relevant ones stand out. A modal alignment loss (query–video, query–clip, caption–clip) keeps the three streams in a shared space.</p>
+      </div>
+    </div>
+    <figure>
+      <div class="plate"><img src="static/images/rfm.png" alt="Ranking-based filtering module: similarity fusion of query-video and query-caption matrices, ranking by the word-highlighted vector, and iterative clip filtering." width="943" height="1068" style="max-width:min(100%,520px)"></div>
+      <figcaption>The ranking-based filtering module. Video clips are filtered iteratively, following the ranking of the most important query tokens.</figcaption>
+    </figure>
+  </section>
+
+  <section id="results">
+    <h2>Results</h2>
+    <p>On the QVHighlights test set, our method leads on every metric with video-only features, and on most metrics when audio is added. It also reaches the best average on TVSum highlight detection (89.2 top-5 mAP, against 88.7 for Keyword-DETR).</p>
+
+    <div class="table-block">
+      <h3>QVHighlights (test)</h3>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr class="group"><th></th><th colspan="5">Moment retrieval</th><th colspan="2">Highlight detection</th></tr>
+            <tr><th>Method</th><th>R1@0.5</th><th>R1@0.7</th><th>mAP@0.5</th><th>mAP@0.75</th><th>mAP avg</th><th>mAP</th><th>HIT@1</th></tr>
+          </thead>
+          <tbody>
+            <tr class="sep"><td colspan="8">Video only</td></tr>
+            <tr><td>Moment-DETR<span class="v">NeurIPS’21</span></td><td>52.89</td><td>33.02</td><td>54.82</td><td>29.40</td><td>30.73</td><td>35.69</td><td>55.60</td></tr>
+            <tr><td>QD-DETR<span class="v">CVPR’23</span></td><td>62.40</td><td>44.98</td><td>62.52</td><td>39.88</td><td>39.86</td><td>38.94</td><td>62.40</td></tr>
+            <tr><td>UniVTG<span class="v">ICCV’23</span></td><td>58.86</td><td>40.86</td><td>57.60</td><td>35.59</td><td>35.47</td><td>38.20</td><td>60.96</td></tr>
+            <tr><td>TR-DETR<span class="v">AAAI’24</span></td><td>64.66</td><td>48.96</td><td>63.98</td><td>43.73</td><td>42.62</td><td>39.91</td><td>63.42</td></tr>
+            <tr><td>UVCOM<span class="v">CVPR’24</span></td><td>63.55</td><td>47.47</td><td>63.37</td><td>42.67</td><td>43.18</td><td>39.74</td><td>64.20</td></tr>
+            <tr><td>Keyword-DETR<span class="v">AAAI’25</span></td><td>66.86</td><td>51.23</td><td>67.73</td><td>46.24</td><td>45.69</td><td>40.94</td><td>64.79</td></tr>
+            <tr class="ours"><td>Ours</td><td><b class="best">68.09</b></td><td><b class="best">52.20</b></td><td><b class="best">67.81</b></td><td><b class="best">46.74</b></td><td><b class="best">46.54</b></td><td><b class="best">42.24</b></td><td><b class="best">68.22</b></td></tr>
+            <tr class="sep"><td colspan="8">Video + audio</td></tr>
+            <tr><td>UMT<span class="v">CVPR’22</span></td><td>56.23</td><td>41.18</td><td>53.38</td><td>37.01</td><td>36.12</td><td>38.18</td><td>59.99</td></tr>
+            <tr><td>QD-DETR<span class="v">CVPR’23</span></td><td>63.06</td><td>45.10</td><td>63.04</td><td>40.10</td><td>40.19</td><td>39.04</td><td>62.87</td></tr>
+            <tr><td>TR-DETR<span class="v">AAAI’24</span></td><td>65.05</td><td>47.67</td><td>64.87</td><td>42.98</td><td>43.10</td><td>39.90</td><td>63.88</td></tr>
+            <tr><td>UVCOM<span class="v">CVPR’24</span></td><td>63.81</td><td>48.70</td><td>64.47</td><td>44.01</td><td>43.27</td><td>39.79</td><td>64.79</td></tr>
+            <tr><td>Keyword-DETR<span class="v">AAAI’25</span></td><td>67.77</td><td>50.52</td><td><b class="best">68.30</b></td><td>45.88</td><td>45.52</td><td>41.15</td><td>65.82</td></tr>
+            <tr class="ours"><td>Ours</td><td><b class="best">68.87</b></td><td><b class="best">52.27</b></td><td>68.09</td><td><b class="best">46.55</b></td><td><b class="best">46.23</b></td><td><b class="best">42.36</b></td><td><b class="best">69.78</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="table-block">
+        <h3>Charades-STA (moment retrieval)</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Method</th><th>R1@0.5</th><th>R1@0.7</th></tr></thead>
+            <tbody>
+              <tr class="sep"><td colspan="3">VGG features</td></tr>
+              <tr><td>UMT†</td><td>48.31</td><td>29.25</td></tr>
+              <tr><td>QD-DETR</td><td>52.77</td><td>31.13</td></tr>
+              <tr><td>TR-DETR</td><td>53.47</td><td>30.81</td></tr>
+              <tr><td>TaskWeave</td><td>56.51</td><td>33.66</td></tr>
+              <tr><td>Keyword-DETR</td><td>54.89</td><td>31.97</td></tr>
+              <tr class="ours"><td>Ours</td><td><b class="best">61.51</b></td><td><b class="best">37.58</b></td></tr>
+              <tr class="sep"><td colspan="3">SlowFast + CLIP features</td></tr>
+              <tr><td>QD-DETR</td><td>57.31</td><td>32.55</td></tr>
+              <tr><td>UniVTG</td><td>58.01</td><td>35.65</td></tr>
+              <tr><td>TR-DETR</td><td>57.61</td><td>33.52</td></tr>
+              <tr><td>UVCOM</td><td>59.25</td><td>36.64</td></tr>
+              <tr><td>Keyword-DETR</td><td><b class="best">61.08</b></td><td>37.89</td></tr>
+              <tr class="ours"><td>Ours</td><td>60.97</td><td><b class="best">38.52</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figcaption>† trained with the audio modality.</figcaption>
+      </div>
+
+      <div class="table-block">
+        <h3>Filtering iterations (QVHighlights val)</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th><em>N</em></th><th>R1@0.5</th><th>R1@0.7</th><th>mAP avg</th><th>HD mAP</th><th>HIT@1</th></tr></thead>
+            <tbody>
+              <tr><td>0</td><td>69.16</td><td>53.81</td><td>46.81</td><td>42.86</td><td>69.61</td></tr>
+              <tr><td>1</td><td>69.48</td><td>54.13</td><td>47.10</td><td>42.91</td><td>70.06</td></tr>
+              <tr><td>3</td><td>69.74</td><td>54.45</td><td>47.30</td><td>42.98</td><td>70.90</td></tr>
+              <tr class="ours"><td>5</td><td><b class="best">70.00</b></td><td><b class="best">55.68</b></td><td><b class="best">48.14</b></td><td><b class="best">43.24</b></td><td><b class="best">71.23</b></td></tr>
+              <tr><td>7</td><td><b class="best">70.00</b></td><td>53.87</td><td>47.09</td><td>42.76</td><td>69.29</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figcaption>More iterations refine clip selection up to <em>N</em> = 5. At <em>N</em> = 7 the model starts to over-filter.</figcaption>
+      </div>
+    </div>
+
+    <div class="table-block">
+      <h3>Ablation (QVHighlights val)</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th class="c" style="text-align:center">Captions</th><th style="text-align:center">FEM</th><th style="text-align:center">RFM</th><th>R1@0.5</th><th>R1@0.7</th><th>mAP avg</th><th>HD mAP</th><th>HIT@1</th></tr></thead>
+          <tbody>
+            <tr><td class="c">–</td><td class="c">–</td><td class="c">–</td><td>66.13</td><td>49.74</td><td>43.24</td><td>40.11</td><td>64.77</td></tr>
+            <tr><td class="c">–</td><td class="c">✓</td><td class="c">–</td><td>66.32</td><td>49.81</td><td>43.53</td><td>40.80</td><td>65.10</td></tr>
+            <tr><td class="c">–</td><td class="c">–</td><td class="c">✓</td><td>67.55</td><td>49.61</td><td>44.38</td><td>41.29</td><td>65.81</td></tr>
+            <tr><td class="c">–</td><td class="c">✓</td><td class="c">✓</td><td>69.42</td><td>51.81</td><td>45.56</td><td>41.32</td><td>66.06</td></tr>
+            <tr><td class="c">✓</td><td class="c">–</td><td class="c">–</td><td>69.03</td><td>52.71</td><td>46.34</td><td>42.23</td><td>67.94</td></tr>
+            <tr><td class="c">✓</td><td class="c">✓</td><td class="c">–</td><td>69.16</td><td>53.81</td><td>46.81</td><td>42.86</td><td>69.61</td></tr>
+            <tr><td class="c">✓</td><td class="c">–</td><td class="c">✓</td><td>69.42</td><td>53.87</td><td>47.43</td><td>42.29</td><td>68.00</td></tr>
+            <tr class="ours"><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td><b class="best">70.00</b></td><td><b class="best">55.68</b></td><td><b class="best">48.14</b></td><td><b class="best">43.24</b></td><td><b class="best">71.23</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption>Both modules help on their own and work best together. Captions add further gains, but the improvement is not only from captions: given the same InternVL2 captions, TR-DETR, UVCOM, and Keyword-DETR reach 46.60, 47.68, and 47.73 mAP avg, against 48.14 for ours.</figcaption>
+    </div>
+  </section>
+
+  <section id="qualitative">
+    <h2>Qualitative results</h2>
+    <figure>
+      <div class="plate"><img src="static/images/qualitative.png" alt="Two QVHighlights examples comparing predicted moments and saliency curves of ours, TR-DETR, UVCOM and Keyword-DETR against ground truth." width="2097" height="581"></div>
+      <figcaption>Moment retrieval and highlight detection on the QVHighlights val set. Our predicted intervals and saliency curves follow the ground truth more closely than TR-DETR, UVCOM, and Keyword-DETR.</figcaption>
+    </figure>
+    <div class="split">
+      <figure>
+        <div class="plate"><img src="static/images/words.png" alt="Bar charts of word importance for two queries, with the top five words ranked." width="961" height="632"></div>
+        <figcaption>Top-<em>N</em> important words from the word-highlighted vector (<em>N</em> = 5).</figcaption>
+      </figure>
+      <div>
+        <h3>Which words does the model rank first?</h3>
+        <p>For <em>“Man leans his head out a truck window”</em>, the model ranks <em>Man</em>, <em>leans</em>, <em>head</em>, <em>window</em>, and <em>out</em> highest. It favors words tied to actions and objects, or strongly connected to the rest of the sentence, which are the words that help retrieve the right clips.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="bibtex">
+    <h2>BibTeX</h2>
+    <div class="bib">
+      <button class="btn ghost copy" id="copy-bib" type="button">Copy</button>
+<pre id="bib-text">@inproceedings{lee2026see,
+  title     = {See, Rank, and Filter: Important Word-Aware Clip Filtering via Scene Understanding for Moment Retrieval and Highlight Detection},
+  author    = {Lee, YuEun and Kim, Jung Uk},
+  booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume    = {40},
+  number    = {8},
+  pages     = {5936--5944},
+  year      = {2026}
+}</pre>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>This work was supported by the NRF grant funded by the Korea government (MSIT) (No. RS-2023-00252391), and by IITP grants funded by the Korea government (MSIT) (No. RS-2022-00155911, RS-2025-25442384, IITP-2023-RS-2023-00266615, RS-2022-II220124).</p>
+    <p>The code builds on <a href="https://github.com/mingyao1120/TR-DETR">TR-DETR</a>. Visual AI Lab, Kyung Hee University.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var order = ['man', 'duck', 'bus'];
+  var clips = [].slice.call(document.querySelectorAll('#strip .clip'));
+  var words = [].slice.call(document.querySelectorAll('.query .w'));
+  var steps = [].slice.call(document.querySelectorAll('.step'));
+  function show(n) {
+    var need = order.slice(0, n);
+    clips.forEach(function (c) {
+      var has = c.getAttribute('data-has').split(' ');
+      var keep = need.every(function (w) { return has.indexOf(w) !== -1; });
+      c.classList.toggle('out', !keep);
+      c.classList.toggle('hit', keep && n === order.length);
+    });
+    words.forEach(function (w) { w.classList.toggle('on', need.indexOf(w.getAttribute('data-w')) !== -1); });
+    steps.forEach(function (s) { s.setAttribute('aria-pressed', String(Number(s.getAttribute('data-step')) === n)); });
+  }
+  steps.forEach(function (s) { s.addEventListener('click', function () { show(Number(s.getAttribute('data-step'))); }); });
+  show(3);
+
+  var btn = document.getElementById('copy-bib'), pre = document.getElementById('bib-text');
+  btn.addEventListener('click', function () {
+    function select() { var r = document.createRange(); r.selectNodeContents(pre); var s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+    try {
+      navigator.clipboard.writeText(pre.textContent).then(function () {
+        btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1600);
+      }, select);
+    } catch (e) { select(); }
+  });
+})();
+</script>
+</body>
+</html>
