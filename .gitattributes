@@ -1,2 +1,0 @@
-data/charades_sta/charades_sta_caption_train_vgg.jsonl filter=lfs diff=lfs merge=lfs -text
-checkpoint/model_best.ckpt filter=lfs diff=lfs merge=lfs -text
